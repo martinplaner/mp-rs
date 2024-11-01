@@ -1,6 +1,6 @@
 use askama_axum::{Response, Template};
 use axum::extract::{Path, State};
-use axum::http::{header, StatusCode, Uri};
+use axum::http::{header, HeaderMap, StatusCode, Uri};
 use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::Router;
@@ -72,6 +72,7 @@ struct IndexTemplate {
 struct Assets;
 
 const DELIMITER: &str = "-";
+const ACCEPT_TEXT_PLAIN: &str = "text/plain";
 
 #[tokio::main]
 async fn main() {
@@ -131,24 +132,37 @@ async fn asset_handler(uri: Uri) -> Result<impl IntoResponse, AppError> {
     }
 }
 
-async fn root_handler(state: State<AppContext>) -> Result<impl IntoResponse, AppError> {
+async fn root_handler(
+    state: State<AppContext>,
+    headers: HeaderMap,
+) -> Result<impl IntoResponse, AppError> {
     let term = state.config.default_term.clone();
-    term_handler(state, Path(term)).await
+    term_handler(state, Path(term), headers).await
 }
 
 async fn term_handler(
     State(state): State<AppContext>,
     Path(term): Path<String>,
-) -> Result<impl IntoResponse, AppError> {
+    headers: HeaderMap,
+) -> Result<Response, AppError> {
     let word = generate_word(&state.dict, &term, &state.config.delimiter).ok_or(AppError {
         message: "Error generating word".to_string(),
         status_code: Some(StatusCode::NOT_FOUND),
     })?;
 
+    if headers
+        .get(header::ACCEPT)
+        .and_then(|t| t.to_str().ok())
+        .map_or(false, |t| t.contains(ACCEPT_TEXT_PLAIN))
+    {
+        return Ok((StatusCode::OK, word).into_response());
+    }
+
     Ok(IndexTemplate {
         term: state.config.default_term.clone(),
         result: word,
-    })
+    }
+    .into_response())
 }
 
 fn load_dict(path: &str) -> io::Result<HashMap<char, Vec<String>>> {
