@@ -4,16 +4,37 @@ use axum::http::{header, StatusCode, Uri};
 use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::Router;
+use clap::Parser;
 use rand::{thread_rng, Rng};
 use rust_embed::Embed;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::process::exit;
 use std::sync::Arc;
 use std::{io, path};
 use tokio::signal;
 
-#[derive(Default, Clone)]
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Cli {
+    /// Path to word list (one word per line)
+    #[arg(short, long, default_value = "words.txt")]
+    file: String,
+
+    /// TCP address for the server to listen on, in the form 'host:port'
+    #[arg(short, long, default_value = "0.0.0.0:8080")]
+    listen: String,
+
+    /// Default fallback query term, if not provided
+    #[arg(short, long, default_value = "MP")]
+    default_query: String,
+
+    #[arg(short, long)]
+    once: Option<String>,
+}
+
+#[derive(Clone)]
 struct AppContext {
     dict: Arc<HashMap<char, Vec<String>>>,
     config: Arc<Config>,
@@ -22,15 +43,6 @@ struct AppContext {
 struct Config {
     delimiter: String,
     default_term: String,
-}
-
-impl Default for Config {
-    fn default() -> Config {
-        Config {
-            delimiter: "-".to_owned(),
-            default_term: "MP".to_owned(),
-        }
-    }
 }
 
 #[derive(Debug)]
@@ -51,7 +63,7 @@ impl IntoResponse for AppError {
 #[derive(Template)]
 #[template(path = "index.html")]
 struct IndexTemplate {
-    query: String,
+    term: String,
     result: String,
 }
 
@@ -59,13 +71,26 @@ struct IndexTemplate {
 #[folder = "assets/"]
 struct Assets;
 
+const DELIMITER: &str = "-";
+
 #[tokio::main]
 async fn main() {
-    let dict = load_dict("words_de.txt").expect("Error loading dictionary");
+    let cli = Cli::parse();
+
+    let dict = load_dict(&cli.file).expect("Error loading dictionary");
+
+    if let Some(term) = cli.once {
+        let word = generate_word(&dict, &term, DELIMITER).expect("Error generating word");
+        println!("{}", word);
+        exit(0);
+    };
 
     let state = AppContext {
         dict: Arc::new(dict),
-        config: Arc::new(Config::default()),
+        config: Arc::new(Config {
+            delimiter: String::from(DELIMITER),
+            default_term: cli.default_query,
+        }),
     };
 
     let app_router = Router::new()
@@ -77,9 +102,11 @@ async fn main() {
 
     let router = Router::new().merge(asset_router).merge(app_router);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080")
+    let listener = tokio::net::TcpListener::bind(cli.listen)
         .await
         .expect("Can't bind to address");
+
+    println!("Listening on {}", listener.local_addr().unwrap());
 
     axum::serve(listener, router)
         .with_graceful_shutdown(shutdown_signal())
@@ -119,7 +146,7 @@ async fn term_handler(
     })?;
 
     Ok(IndexTemplate {
-        query: state.config.default_term.clone(),
+        term: state.config.default_term.clone(),
         result: word,
     })
 }
