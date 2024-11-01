@@ -2,11 +2,14 @@ name: Docker
 
 on:
   push:
-    branches: [ "master" ]
+    branches:
+      - master
 #  workflow_run:
 #    workflows: [ Rust ]
 #    types:
 #      - completed
+#    branches:
+#      - master
 
 env:
   REGISTRY: ghcr.io
@@ -16,6 +19,12 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
 
     steps:
       - name: Checkout
