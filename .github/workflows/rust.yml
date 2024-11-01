@@ -2,8 +2,8 @@ name: Rust
 
 on:
   push:
-    #    branches: [ "master" ]
-    branches: [ "disabled" ]
+    branches:
+      - master
 
 env:
   CARGO_TERM_COLOR: always
