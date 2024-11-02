@@ -1,21 +1,65 @@
+use axum::extract::{Path, State};
+use axum::http::StatusCode;
+use axum::response::IntoResponse;
+use axum::routing::get;
+use axum::Router;
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 use std::fs::File;
-use std::io;
 use std::io::{BufRead, BufReader};
-use std::path::Path;
+use std::{io, path};
+use tokio::signal;
 
-fn main() {
+#[derive(Clone)]
+struct AppState {
+    dict: HashMap<char, Vec<String>>,
+    delimiter: String,
+    default_term: String,
+}
+
+#[tokio::main]
+async fn main() {
     let dict = load_dict("words_de.txt").expect("Error loading dictionary");
+    let state = AppState {
+        dict,
+        delimiter: "-".to_owned(),
+        default_term: "mp".to_owned(),
+    };
 
-    println!("{:#?}", generate_word(&dict, "mp", "-"));
-    println!("{:#?}", generate_word(&dict, "mp", "-"));
-    println!("{:#?}", generate_word(&dict, "mp", "-"));
-    println!("{:#?}", generate_word(&dict, "abc", " "));
+    let router = Router::new()
+        .route("/", get(root_handler))
+        .route("/:term", get(term_handler))
+        .with_state(state);
+
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:8080")
+        .await
+        .expect("Can't bind to address");
+
+    axum::serve(listener, router)
+        .with_graceful_shutdown(shutdown_signal())
+        .await
+        .unwrap();
+}
+
+async fn root_handler(State(state): State<AppState>) -> impl IntoResponse {
+    match generate_word(&state.dict, &state.default_term, &state.delimiter) {
+        None => (StatusCode::NOT_FOUND, StatusCode::NOT_FOUND.to_string()),
+        Some(word) => (StatusCode::OK, word),
+    }
+}
+
+async fn term_handler(
+    State(state): State<AppState>,
+    Path(term): Path<String>,
+) -> impl IntoResponse {
+    match generate_word(&state.dict, &term, &state.delimiter) {
+        None => (StatusCode::NOT_FOUND, StatusCode::NOT_FOUND.to_string()),
+        Some(word) => (StatusCode::OK, word),
+    }
 }
 
 fn load_dict(path: &str) -> io::Result<HashMap<char, Vec<String>>> {
-    let file = File::open(Path::new(path))?;
+    let file = File::open(path::Path::new(path))?;
     let reader = BufReader::new(file);
 
     let mut dict: HashMap<char, Vec<String>> = HashMap::new();
@@ -48,4 +92,28 @@ fn generate_word(dict: &HashMap<char, Vec<String>>, term: &str, delimiter: &str)
         })
         .collect::<Option<Vec<String>>>()
         .map(|words| words.join(delimiter))
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        signal::unix::signal(signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
 }
