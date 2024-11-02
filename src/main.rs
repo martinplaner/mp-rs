@@ -7,12 +7,17 @@ use rand::{thread_rng, Rng};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::sync::Arc;
 use std::{io, path};
 use tokio::signal;
 
 #[derive(Clone)]
-struct AppState {
-    dict: HashMap<char, Vec<String>>,
+struct AppContext {
+    dict: Arc<HashMap<char, Vec<String>>>,
+    config: Arc<Config>,
+}
+
+struct Config {
     delimiter: String,
     default_term: String,
 }
@@ -20,10 +25,13 @@ struct AppState {
 #[tokio::main]
 async fn main() {
     let dict = load_dict("words_de.txt").expect("Error loading dictionary");
-    let state = AppState {
-        dict,
-        delimiter: "-".to_owned(),
-        default_term: "mp".to_owned(),
+
+    let state = AppContext {
+        dict: Arc::new(dict),
+        config: Arc::new(Config {
+            delimiter: "-".to_owned(),
+            default_term: "mp".to_owned(),
+        }),
     };
 
     let router = Router::new()
@@ -41,18 +49,22 @@ async fn main() {
         .unwrap();
 }
 
-async fn root_handler(State(state): State<AppState>) -> impl IntoResponse {
-    match generate_word(&state.dict, &state.default_term, &state.delimiter) {
+async fn root_handler(State(state): State<AppContext>) -> impl IntoResponse {
+    match generate_word(
+        &state.dict,
+        &state.config.default_term,
+        &state.config.delimiter,
+    ) {
         None => (StatusCode::NOT_FOUND, StatusCode::NOT_FOUND.to_string()),
         Some(word) => (StatusCode::OK, word),
     }
 }
 
 async fn term_handler(
-    State(state): State<AppState>,
+    State(state): State<AppContext>,
     Path(term): Path<String>,
 ) -> impl IntoResponse {
-    match generate_word(&state.dict, &term, &state.delimiter) {
+    match generate_word(&state.dict, &term, &state.config.delimiter) {
         None => (StatusCode::NOT_FOUND, StatusCode::NOT_FOUND.to_string()),
         Some(word) => (StatusCode::OK, word),
     }
