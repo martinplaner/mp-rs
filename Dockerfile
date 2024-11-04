@@ -1,12 +1,15 @@
-FROM rust AS build-env
+FROM rust:alpine AS build-env
 
 WORKDIR /build/
+
+RUN apk add --no-cache musl-dev
 
 COPY . .
 
 RUN cargo build --release
 
-FROM debian:bookworm-slim
+
+FROM alpine
 
 WORKDIR /app/
 
