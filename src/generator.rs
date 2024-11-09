@@ -1,6 +1,5 @@
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
-use std::io::{BufRead, Error};
 
 pub trait Generator {
     fn generate(&self, term: &str) -> Option<String>;
@@ -12,7 +11,10 @@ pub struct CompoundGenerator {
 }
 
 impl CompoundGenerator {
-    pub fn new(reader: impl BufRead, delimiter: &str) -> Result<CompoundGenerator, Error> {
+    pub fn new<R: std::io::BufRead>(
+        reader: R,
+        delimiter: &str,
+    ) -> Result<CompoundGenerator, std::io::Error> {
         let mut dict: HashMap<char, Vec<String>> = HashMap::new();
         for line in reader.lines() {
             let line = line?.trim().to_owned();
@@ -60,7 +62,6 @@ impl Generator for CompoundGenerator {
 #[cfg(test)]
 mod tests {
     use crate::generator::{CompoundGenerator, Generator};
-    use std::io::BufReader;
 
     #[test]
     fn generate_some() {
@@ -72,8 +73,7 @@ mod tests {
 
     #[test]
     fn generate_none() {
-        let reader = BufReader::new(std::io::empty());
-        let generator = CompoundGenerator::new(reader, "-").unwrap();
+        let generator = CompoundGenerator::new(std::io::empty(), "-").unwrap();
 
         assert_eq!(generator.generate("ab"), None);
         assert_eq!(generator.generate(""), None);
