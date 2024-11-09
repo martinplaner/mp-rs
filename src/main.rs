@@ -1,3 +1,6 @@
+mod generator;
+
+use crate::generator::{CompoundGenerator, Generator};
 use askama_axum::{Response, Template};
 use axum::extract::{Path, State};
 use axum::http::{header, HeaderMap, StatusCode, Uri};
@@ -5,14 +8,12 @@ use axum::response::IntoResponse;
 use axum::routing::get;
 use axum::Router;
 use clap::Parser;
-use rand::{thread_rng, Rng};
 use rust_embed::Embed;
-use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufRead, BufReader};
+use std::io::BufReader;
+use std::path;
 use std::process::exit;
 use std::sync::Arc;
-use std::{io, path};
 use tokio::signal;
 
 #[derive(Parser, Debug)]
@@ -30,18 +31,18 @@ struct Cli {
     #[arg(short, long, default_value = "MP")]
     default_query: String,
 
+    /// Run generation once with the given query and print result, then quit
     #[arg(short, long)]
     once: Option<String>,
 }
 
 #[derive(Clone)]
 struct AppContext {
-    dict: Arc<HashMap<char, Vec<String>>>,
+    generator: Arc<dyn Generator + Send + Sync>,
     config: Arc<Config>,
 }
 
 struct Config {
-    delimiter: String,
     default_term: String,
 }
 
@@ -78,18 +79,21 @@ const ACCEPT_TEXT_PLAIN: &str = "text/plain";
 async fn main() {
     let cli = Cli::parse();
 
-    let dict = load_dict(&cli.file).expect("Error loading dictionary");
+    let file = File::open(path::Path::new(&cli.file)).expect("Error loading file");
+    let reader = BufReader::new(file);
+
+    let generator =
+        CompoundGenerator::new(reader, DELIMITER).expect("Error initializing generator");
 
     if let Some(term) = cli.once {
-        let word = generate_word(&dict, &term, DELIMITER).expect("Error generating word");
+        let word = generator.generate(&term).expect("Error generating word");
         println!("{}", word);
         exit(0);
     };
 
     let state = AppContext {
-        dict: Arc::new(dict),
+        generator: Arc::new(generator),
         config: Arc::new(Config {
-            delimiter: String::from(DELIMITER),
             default_term: cli.default_query,
         }),
     };
@@ -145,7 +149,7 @@ async fn term_handler(
     Path(term): Path<String>,
     headers: HeaderMap,
 ) -> Result<Response, AppError> {
-    let word = generate_word(&state.dict, &term, &state.config.delimiter).ok_or(AppError {
+    let word = state.generator.generate(&term).ok_or(AppError {
         message: "Error generating word".to_string(),
         status_code: Some(StatusCode::NOT_FOUND),
     })?;
@@ -163,42 +167,6 @@ async fn term_handler(
         result: word,
     }
     .into_response())
-}
-
-fn load_dict(path: &str) -> io::Result<HashMap<char, Vec<String>>> {
-    let file = File::open(path::Path::new(path))?;
-    let reader = BufReader::new(file);
-
-    let mut dict: HashMap<char, Vec<String>> = HashMap::new();
-    for line in reader.lines() {
-        let line = line?;
-
-        if line.starts_with('#') {
-            continue;
-        }
-
-        if let Some(mut first_char) = line.chars().next() {
-            first_char = first_char.to_uppercase().next().unwrap_or(first_char);
-            dict.entry(first_char).or_default().push(line);
-        }
-    }
-
-    Ok(dict)
-}
-
-fn generate_word(dict: &HashMap<char, Vec<String>>, term: &str, delimiter: &str) -> Option<String> {
-    let mut rng = thread_rng();
-
-    term.to_uppercase()
-        .chars()
-        .map(|c| {
-            dict.get(&c).and_then(|words| {
-                let i = rng.gen_range(0..words.len());
-                words.get(i).map(|s| s.to_owned())
-            })
-        })
-        .collect::<Option<Vec<String>>>()
-        .map(|words| words.join(delimiter))
 }
 
 async fn shutdown_signal() {
