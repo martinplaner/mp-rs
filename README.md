@@ -2,6 +2,7 @@
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](LICENSE-APACHE)
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE-MIT)
+![GitHub Actions Rust Workflow](https://github.com/martinplaner/MP-RS/actions/workflows/rust.yml/badge.svg)
 
 Highly sophisticated [initialism](https://en.wikipedia.org/wiki/Acronym#Nomenclature) to
 hyphenated [compound words](https://en.wikipedia.org/wiki/Compound_(linguistics)) generator.
