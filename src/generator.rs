@@ -1,4 +1,4 @@
-use rand::{thread_rng, Rng};
+use rand::{rng, Rng};
 use std::collections::HashMap;
 
 pub trait Generator {
@@ -38,14 +38,14 @@ impl CompoundGenerator {
 
 impl Generator for CompoundGenerator {
     fn generate(&self, term: &str) -> Option<String> {
-        let mut rng = thread_rng();
+        let mut rng = rng();
 
         let words = term
             .to_uppercase()
             .chars()
             .filter_map(|c| {
                 self.dict.get(&c).and_then(|words| {
-                    let i = rng.gen_range(0..words.len());
+                    let i = rng.random_range(0..words.len());
                     words.get(i).map(|s| s.to_owned())
                 })
             })

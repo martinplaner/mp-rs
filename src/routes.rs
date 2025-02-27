@@ -1,10 +1,11 @@
 use crate::generator::Generator;
 use askama::Template;
-use askama_axum::{IntoResponse, Response};
+use askama_derive_axum::IntoResponse;
 use axum::extract::{Path, State};
 use axum::http::{header, HeaderMap, StatusCode, Uri};
 use axum::routing::get;
 use axum::Router;
+use axum_core::response::{IntoResponse, Response};
 use rust_embed::Embed;
 use std::sync::Arc;
 
@@ -16,7 +17,7 @@ pub struct AppContext {
     pub default_term: String,
 }
 
-#[derive(Template)]
+#[derive(Template, IntoResponse)]
 #[template(path = "index.html")]
 struct IndexTemplate {
     term: String,
@@ -45,10 +46,10 @@ impl IntoResponse for AppError {
 pub fn routes(state: AppContext) -> Router {
     let app_router = Router::new()
         .route("/", get(root_handler))
-        .route("/:term", get(term_handler))
+        .route("/{term}", get(term_handler))
         .with_state(state);
 
-    let asset_router = Router::new().route("/_assets/*file", get(asset_handler));
+    let asset_router = Router::new().route("/_assets/{*file}", get(asset_handler));
 
     Router::new().merge(asset_router).merge(app_router)
 }
