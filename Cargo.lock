@@ -88,7 +88,7 @@ checksum = "53d88acb026495677e0f191c2e47bb5aa6c9e998764f8be2dec736442a8290cd"
 dependencies = [
  "askama",
  "askama_derive",
- "axum-core 0.5.0",
+ "axum-core 0.5.2",
  "http",
  "proc-macro2",
  "quote",
@@ -161,7 +161,7 @@ version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6d6fd624c75e18b3b4c6b9caf42b1afe24437daaee904069137d8bab077be8b8"
 dependencies = [
- "axum-core 0.5.0",
+ "axum-core 0.5.2",
  "bytes",
  "form_urlencoded",
  "futures-util",
@@ -211,12 +211,12 @@ dependencies = [
 
 [[package]]
 name = "axum-core"
-version = "0.5.0"
+version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df1362f362fd16024ae199c1970ce98f9661bf5ef94b9808fee734bc3698b733"
+checksum = "68464cd0412f486726fb3373129ef5d2993f90c34bc2bc1c1e9943b2f4fc7ca6"
 dependencies = [
  "bytes",
- "futures-util",
+ "futures-core",
  "http",
  "http-body",
  "http-body-util",
@@ -635,7 +635,7 @@ dependencies = [
  "askama-derive-axum",
  "askama_axum",
  "axum",
- "axum-core 0.5.0",
+ "axum-core 0.5.2",
  "clap",
  "http",
  "mime_guess",
