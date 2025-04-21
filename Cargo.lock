@@ -88,7 +88,7 @@ checksum = "53d88acb026495677e0f191c2e47bb5aa6c9e998764f8be2dec736442a8290cd"
 dependencies = [
  "askama",
  "askama_derive",
- "axum-core 0.5.2",
+ "axum-core",
  "http",
  "proc-macro2",
  "quote",
@@ -98,14 +98,9 @@ dependencies = [
 
 [[package]]
 name = "askama_axum"
-version = "0.4.0"
+version = "0.5.0+deprecated"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a41603f7cdbf5ac4af60760f17253eb6adf6ec5b6f14a7ed830cf687d375f163"
-dependencies = [
- "askama",
- "axum-core 0.4.5",
- "http",
-]
+checksum = "78ebeda8ac47efa9ea6c5947c911a2db48a9d92cba6fff15ceb2ccbb1ee0f21e"
 
 [[package]]
 name = "askama_derive"
@@ -139,17 +134,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-trait"
-version = "0.1.86"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "644dd749086bf3771a2fbc5f256fdb982d53f011c7d5d560304eafeecebce79d"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "autocfg"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -161,7 +145,7 @@ version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "de45108900e1f9b9242f7f2e254aa3e2c029c921c258fe9e6b4217eeebd54288"
 dependencies = [
- "axum-core 0.5.2",
+ "axum-core",
  "bytes",
  "form_urlencoded",
  "futures-util",
@@ -187,26 +171,6 @@ dependencies = [
  "tower-layer",
  "tower-service",
  "tracing",
-]
-
-[[package]]
-name = "axum-core"
-version = "0.4.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09f2bd6146b97ae3359fa0cc6d6b376d9539582c7b4220f041a33ec24c226199"
-dependencies = [
- "async-trait",
- "bytes",
- "futures-util",
- "http",
- "http-body",
- "http-body-util",
- "mime",
- "pin-project-lite",
- "rustversion",
- "sync_wrapper",
- "tower-layer",
- "tower-service",
 ]
 
 [[package]]
@@ -635,7 +599,7 @@ dependencies = [
  "askama-derive-axum",
  "askama_axum",
  "axum",
- "axum-core 0.5.2",
+ "axum-core",
  "clap",
  "http",
  "mime_guess",
