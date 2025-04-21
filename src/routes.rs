@@ -1,11 +1,11 @@
 use crate::generator::Generator;
 use askama::Template;
-use askama_derive_axum::IntoResponse;
 use axum::extract::{Path, State};
 use axum::http::{header, HeaderMap, StatusCode, Uri};
+use axum::response::Response;
+use axum::response::{Html, IntoResponse};
 use axum::routing::get;
 use axum::Router;
-use axum_core::response::{IntoResponse, Response};
 use rust_embed::Embed;
 use std::sync::Arc;
 
@@ -17,7 +17,7 @@ pub struct AppContext {
     pub default_term: String,
 }
 
-#[derive(Template, IntoResponse)]
+#[derive(Template)]
 #[template(path = "index.html")]
 struct IndexTemplate {
     term: String,
@@ -83,7 +83,7 @@ async fn term_handler(
     State(state): State<AppContext>,
     Path(term): Path<String>,
     headers: HeaderMap,
-) -> Result<Response, AppError> {
+) -> Result<impl IntoResponse, AppError> {
     let word = state.generator.generate(&term).ok_or(AppError {
         message: "Error generating word".to_string(),
         status_code: Some(StatusCode::NOT_FOUND),
@@ -92,14 +92,21 @@ async fn term_handler(
     if headers
         .get(header::ACCEPT)
         .and_then(|t| t.to_str().ok())
-        .map_or(false, |t| t.contains(ACCEPT_TEXT_PLAIN))
+        .is_some_and(|t| t.contains(ACCEPT_TEXT_PLAIN))
     {
         return Ok((StatusCode::OK, word).into_response());
     }
 
-    Ok(IndexTemplate {
-        term: state.default_term.clone(),
-        result: word,
-    }
+    Ok(Html(
+        IndexTemplate {
+            term: state.default_term.clone(),
+            result: word,
+        }
+        .render()
+        .map_err(|e| AppError {
+            message: format!("Template rendering error: {}", e),
+            status_code: Some(StatusCode::INTERNAL_SERVER_ERROR),
+        }),
+    )
     .into_response())
 }
