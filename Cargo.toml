@@ -10,4 +10,4 @@ clap = { version = "4.5.40", features = ["derive"] }
 mime_guess = "2.0.5"
 rand = "0.9.1"
 rust-embed = "8.7.2"
-tokio = { version = "1.45.1", features = ["full"] }
+tokio = { version = "1.46.0", features = ["full"] }
