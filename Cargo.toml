@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-askama = { version = "0.15.1" }
+askama = { version = "0.15.3" }
 axum = "0.8.8"
 clap = { version = "4.5.54", features = ["derive"] }
 mime_guess = "2.0.5"
